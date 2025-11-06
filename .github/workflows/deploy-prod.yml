@@ -20,9 +20,16 @@ jobs:
       - name: Deploy to Production Server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
-            cd /root/taxi_project
-            git checkout main
-            git pull origin main
+            if [ -d "/root/taxi_project/.git" ]; then
+              echo "Repository exists. Pulling latest changes..."
+              cd /root/taxi_project
+              git checkout main
+              git pull origin main
+            else
+              echo "Repository not found. Cloning..."
+              git clone https://github.com/1337Tema/Taxi-service.git /root/taxi_project
+              cd /root/taxi_project
+            fi
 
             echo "${{ secrets.ENV_FILE_PROD }}" > .env.prod
 

@@ -20,9 +20,18 @@ jobs:
       - name: Deploy to Staging Server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
-            cd /root/taxi_project
-            git checkout develop
-            git pull origin develop
+
+            if [ -d "/root/taxi_project/.git" ]; then
+              echo "Repository exists. Pulling latest changes..."
+              cd /root/taxi_project
+              git checkout develop
+              git pull origin develop
+            else
+              echo "Repository not found. Cloning..."
+              git clone https://github.com/1337Tema/Taxi-service.git /root/taxi_project
+              cd /root/taxi_project
+              git checkout develop
+            fi
 
             # Записываем переменные окружения из секрета GitHub
             echo "${{ secrets.ENV_FILE_STAGING }}" > .env.staging
