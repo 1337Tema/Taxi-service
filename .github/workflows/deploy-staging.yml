@@ -1,0 +1,35 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+
+      - name: Deploy to Staging Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
+            cd ~/taxi_project # Переходим в директорию проекта
+            git checkout develop
+            git pull origin develop
+
+            # Записываем переменные окружения из секрета GitHub
+            echo "${{ secrets.ENV_FILE_STAGING }}" > .env.staging
+
+            # Явно указываем файл для staging и задаем уникальное имя проекта
+            COMPOSE_PROJECT_NAME=taxi_staging docker-compose -f docker-compose.staging.yml up -d --build
+
+            # Очищаем старые, неиспользуемые образы Docker
+            docker image prune -f
+          EOF

@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.prod
+    restart: always
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data/
+    env_file:
+      - .env.prod
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "9020:80"
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  postgres_data_prod:

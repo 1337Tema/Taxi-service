@@ -1,0 +1,33 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main # Триггер для production - ветка main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Deploy to Production Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
+            cd ~/taxi_project
+            git checkout main
+            git pull origin main
+
+            echo "${{ secrets.ENV_FILE_PROD }}" > .env.prod
+
+            # Явно указываем файл для prod и задаем уникальное имя проекта
+            COMPOSE_PROJECT_NAME=taxi_prod docker-compose -f docker-compose.prod.yml up -d --build
+            
+            docker image prune -f
+          EOF

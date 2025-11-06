@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "taxi-service"
+version = "0.0.0"
+description = "Taxi Grid Service"
+authors = ["Artem Asel Dima"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0.post1"}
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.23"}
+asyncpg = "^0.29.0"
+redis = {extras = ["hiredis"], version = "^5.0.1"}
+pydantic = {extras = ["email"], version = "^2.5.2"}
+pydantic-settings = "^2.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
