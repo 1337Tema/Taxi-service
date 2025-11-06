@@ -20,7 +20,7 @@ jobs:
       - name: Deploy to Staging Server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
-            cd ~/taxi_project # Переходим в директорию проекта
+            cd /root/taxi_project
             git checkout develop
             git pull origin develop
 

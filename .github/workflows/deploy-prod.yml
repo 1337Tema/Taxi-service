@@ -20,7 +20,7 @@ jobs:
       - name: Deploy to Production Server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
-            cd ~/taxi_project
+            cd /root/taxi_project
             git checkout main
             git pull origin main
 
