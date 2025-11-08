@@ -25,6 +25,9 @@ WORKDIR /app
 # Копируем установленные зависимости из builder'а
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
+# Копируем исполняемые файлы, включая uvicorn
+COPY --from=builder /usr/local/bin /usr/local/bin
+
 # Копируем исходный код приложения
 COPY ./src .
 
