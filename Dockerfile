@@ -14,8 +14,8 @@ RUN pip install poetry
 # Копируем файлы для установки зависимостей
 COPY pyproject.toml poetry.lock ./
 
-# Устанавливаем зависимости проекта, не включая dev-зависимости
-RUN poetry config virtualenvs.create false && poetry install --without dev
+# Устанавливаем зависимости проекта
+RUN poetry config virtualenvs.create false && poetry install
 
 # Этап 2: Создаем финальный, легковесный образ
 FROM python:3.11-slim
