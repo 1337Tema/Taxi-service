@@ -21,13 +21,13 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
 
-            if [ -d "/root/taxi_project/.git" ]; then
-              echo "Repository exists. Pulling latest changes..."
+            if [ -d "/root/taxi_project" ]; then
+              echo "Project directory exists. Pulling latest changes..."
               cd /root/taxi_project
-              git checkout develop
+              git reset --hard
               git pull origin develop
             else
-              echo "Repository not found. Cloning..."
+              echo "Project directory not found. Cloning repository..."
               git clone https://github.com/1337Tema/Taxi-service.git /root/taxi_project
               cd /root/taxi_project
               git checkout develop
