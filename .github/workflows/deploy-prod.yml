@@ -38,7 +38,7 @@ jobs:
             echo "${{ secrets.ENV_FILE_PROD }}" > .env.prod
 
             # Явно указываем файл для prod и задаем уникальное имя проекта
-            COMPOSE_PROJECT_NAME=taxi_prod docker-compose -f docker-compose.prod.yml up -d --build
+            COMPOSE_PROJECT_NAME=taxi_prod docker compose -f docker-compose.prod.yml up -d --build
             
             docker image prune -f
           EOF

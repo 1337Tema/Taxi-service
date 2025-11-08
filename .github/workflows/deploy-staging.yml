@@ -37,7 +37,7 @@ jobs:
             echo "${{ secrets.ENV_FILE_STAGING }}" > .env.staging
 
             # Явно указываем файл для staging и задаем уникальное имя проекта
-            COMPOSE_PROJECT_NAME=taxi_staging docker-compose -f docker-compose.staging.yml up -d --build
+            COMPOSE_PROJECT_NAME=taxi_staging docker compose -f docker-compose.staging.yml up -d --build
 
             # Очищаем старые, неиспользуемые образы Docker
             docker image prune -f
