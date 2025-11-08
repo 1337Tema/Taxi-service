@@ -21,10 +21,10 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
             
-            if [ -d "/root/taxi_project" ]; then
+            if [ -d "/root/taxi_project/Taxi-service" ]; then
               # Если да, заходим и обновляем
               echo "Project directory exists. Pulling latest changes..."
-              cd /root/taxi_project
+              cd /root/taxi_project/Taxi-service
               # Очищаем возможные локальные изменения перед pull
               git reset --hard
               git pull origin main

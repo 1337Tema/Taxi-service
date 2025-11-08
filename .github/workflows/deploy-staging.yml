@@ -21,9 +21,9 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
 
-            if [ -d "/root/taxi_project" ]; then
+            if [ -d "/root/taxi_project/Taxi-service" ]; then
               echo "Project directory exists. Pulling latest changes..."
-              cd /root/taxi_project
+              cd /root/taxi_project/Taxi-service
               git reset --hard
               git pull origin develop
             else
