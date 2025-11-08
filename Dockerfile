@@ -1,12 +1,12 @@
 # Этап 1: Используем официальный образ Python
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
 # Устанавливаем переменные окружения для Python
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Устанавливаем poetry (менеджер зависимостей)
 RUN pip install poetry
@@ -24,7 +24,6 @@ WORKDIR /app
 
 # Копируем установленные зависимости из builder'а
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /app/.venv /app/.venv
 
 # Копируем исходный код приложения
 COPY ./src .
