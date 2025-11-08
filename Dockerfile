@@ -7,15 +7,16 @@ WORKDIR /app
 # Устанавливаем переменные окружения для Python
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/root/.local/bin:${PATH}"
 
 # Устанавливаем poetry (менеджер зависимостей)
-RUN pip install poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # Копируем файлы для установки зависимостей
 COPY pyproject.toml poetry.lock ./
 
 # Устанавливаем зависимости проекта
-RUN poetry config virtualenvs.create false && poetry install
+RUN poetry config virtualenvs.create false && poetry install --without dev --no-interaction --no-ansi
 
 # Этап 2: Создаем финальный, легковесный образ
 FROM python:3.11-slim
