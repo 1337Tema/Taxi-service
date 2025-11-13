@@ -25,36 +25,37 @@ async def redis_pubsub_listener():
     redis_client = aioredis.Redis(connection_pool=redis_pool)
     pubsub = redis_client.pubsub()
     
-    # Имя канала должно совпадать с тем, что в MatchingService
-    notification_channel = "driver_notifications"
-    await pubsub.subscribe(notification_channel)
+    # Имена каналов
+    driver_channel = "driver_notifications"
+    passenger_channel = "passenger_notifications"
     
-    logger.info(f"Подписка на Redis канал '{notification_channel}' установлена.")
+    # Подписываемся сразу на несколько каналов
+    await pubsub.subscribe(driver_channel, passenger_channel)
+    
+    logger.info(f"Подписка на Redis каналы '{driver_channel}', '{passenger_channel}' установлена.")
     
     try:
         while True:
-            # Ожидаем сообщение
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=None)
             if message and message["type"] == "message":
-                logger.info(f"Получено сообщение из Pub/Sub: {message['data']}")
+                channel = message['channel'] # НОВОЕ: Определяем, из какого канала пришло сообщение
+                logger.info(f"Получено сообщение из канала '{channel}': {message['data']}")
+                
                 try:
-                    # Декодируем и парсим payload
                     payload = json.loads(message["data"])
-                    
-                    # Извлекаем получателя и данные
                     recipient_id = int(payload.get("recipient_user_id"))
                     message_to_send = {
                         "type": payload.get("type"),
                         "data": payload.get("data")
                     }
                     
-                    # Используем наш ConnectionManager для отправки
                     await notification_manager.send_personal_message(
                         recipient_id, message_to_send
                     )
                 except (json.JSONDecodeError, KeyError, ValueError) as e:
                     logger.error(f"Не удалось обработать сообщение из Pub/Sub: {e}")
-            await asyncio.sleep(0.01) # Небольшая пауза, чтобы не загружать ЦП
+                
+            await asyncio.sleep(0.01)
     except asyncio.CancelledError:
         logger.info("Слушатель Pub/Sub остановлен.")
     finally:
