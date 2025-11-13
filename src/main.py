@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 import asyncio
 import json
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+import uuid
 import logging
+from contextvars import ContextVar
 
 # Импортируем роутеры и сервисы
 from src.api.v1 import drivers as drivers_v1
@@ -13,11 +15,14 @@ from src.api.v1 import notifications as notifications_v1
 from src.core.redis import redis_pool
 from src.services.notification_service import notification_manager
 import redis.asyncio as aioredis 
+from src.core.logging_config import setup_logging, RequestIdFilter
 
-# Настройка базовой конфигурации логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# ContextVar для хранения request_id в рамках одного запроса
+request_id_var = ContextVar("request_id", default="N/A")
 
+# Настраиваем логирование при старте
+setup_logging()
+logger = logging.getLogger("src.main") # Используем именованный логгер
 
 async def redis_pubsub_listener():
     """Слушает канал Redis и отправляет уведомления через WebSocket."""
@@ -54,7 +59,7 @@ async def redis_pubsub_listener():
                     )
                 except (json.JSONDecodeError, KeyError, ValueError) as e:
                     logger.error(f"Не удалось обработать сообщение из Pub/Sub: {e}")
-                
+
             await asyncio.sleep(0.01)
     except asyncio.CancelledError:
         logger.info("Слушатель Pub/Sub остановлен.")
@@ -92,6 +97,22 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Middleware для установки request_id
+@app.middleware("http")
+async def add_request_id_middleware(request: Request, call_next):
+    request_id = str(uuid.uuid4())
+    request_id_var.set(request_id)
+    # Добавляем фильтр к логгеру FastAPI на время запроса
+    fastapi_logger = logging.getLogger("fastapi")
+    filter = RequestIdFilter(request_id_storage=request_id_var)
+    fastapi_logger.addFilter(filter)
+    
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    
+    fastapi_logger.removeFilter(filter) # Очищаем фильтр
+    return response
 
 # Подключаем роутеры API
 app.include_router(drivers_v1.router, prefix="/api/v1")
