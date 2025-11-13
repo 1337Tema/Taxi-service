@@ -17,10 +17,14 @@ services:
     env_file:
       - .env.staging
     restart: always
+    ports:
+      - "5432:5432"
 
   redis:
     image: redis:7-alpine
     restart: always
+    ports:
+      - "6379:6379"
 
   nginx:
     build: ./nginx
