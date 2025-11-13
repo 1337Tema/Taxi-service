@@ -8,6 +8,7 @@ import logging
 
 # Импортируем роутеры
 from src.api.v1 import drivers as drivers_v1
+from src.api.v1 import notifications as notifications_v1
 from src.core.redis import redis_pool
 
 # Настройка базовой конфигурации логирования
@@ -37,6 +38,7 @@ app = FastAPI(
 
 # Подключаем роутеры API
 app.include_router(drivers_v1.router, prefix="/api/v1")
+app.include_router(notifications_v1.router, prefix="/api/v1")
 
 
 @app.get("/healthcheck", tags=["Healthcheck"])
