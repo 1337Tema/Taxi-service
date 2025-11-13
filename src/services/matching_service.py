@@ -7,6 +7,7 @@ import asyncio
 import logging
 from typing import Optional, Dict, Any
 from redis.asyncio import Redis
+import json
 
 # Настройка логирования
 logging.basicConfig(
@@ -23,6 +24,7 @@ class DriverMatchingService:
     """
     STREAM_KEY = "order_events"  # Ключ потока для событий заказов
     CONSUMER_GROUP = "matching_group"  # Имя группы потребителей
+    NOTIFICATION_CHANNEL = "driver_notifications" # Имя канала для отправки уведомлений
 
     def __init__(self, redis: Redis):
         self.redis = redis
@@ -177,7 +179,25 @@ class DriverMatchingService:
 
                 if driver_id:
                     logger.info(f"Найден и заблокирован водитель: ID {driver_id} для заказа {ride_id}")
-                    # TODO: Шаг 9 - Реализовать логику блокировки водителя
+                    
+                    # Формируем сообщение для NotificationService
+                    notification_payload = {
+                        "type": "NEW_ORDER_PROPOSAL",
+                        "recipient_user_id": driver_id,
+                        "data": {
+                            "ride_id": ride_id,
+                            "start_x": start_x,
+                            "start_y": start_y,
+                            # TODO: Добавить сюда end_x, end_y, price, когда они будут в сообщении
+                        }
+                    }
+                    
+                    # Публикуем сообщение в канал Pub/Sub
+                    await self.redis.publish(
+                        self.NOTIFICATION_CHANNEL,
+                        json.dumps(notification_payload)
+                    )
+                    logger.info(f"Событие-уведомление для водителя {driver_id} опубликовано в канал {self.NOTIFICATION_CHANNEL}")
                 else:
                     logger.warning(f"Не удалось найти водителя для заказа {data.get('ride_id')}. Заказ остается в очереди.")
                     # TODO: Реализовать логику постановки в очередь ожидания

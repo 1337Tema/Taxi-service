@@ -2,17 +2,64 @@
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-
+import asyncio
+import json
 from fastapi import FastAPI
 import logging
 
-# Импортируем роутеры
+# Импортируем роутеры и сервисы
 from src.api.v1 import drivers as drivers_v1
 from src.api.v1 import notifications as notifications_v1
 from src.core.redis import redis_pool
+from src.services.notification_service import notification_manager
+import redis.asyncio as aioredis 
 
 # Настройка базовой конфигурации логирования
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+async def redis_pubsub_listener():
+    """Слушает канал Redis и отправляет уведомления через WebSocket."""
+    # Создаем отдельное подключение для Pub/Sub
+    redis_client = aioredis.Redis(connection_pool=redis_pool)
+    pubsub = redis_client.pubsub()
+    
+    # Имя канала должно совпадать с тем, что в MatchingService
+    notification_channel = "driver_notifications"
+    await pubsub.subscribe(notification_channel)
+    
+    logger.info(f"Подписка на Redis канал '{notification_channel}' установлена.")
+    
+    try:
+        while True:
+            # Ожидаем сообщение
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=None)
+            if message and message["type"] == "message":
+                logger.info(f"Получено сообщение из Pub/Sub: {message['data']}")
+                try:
+                    # Декодируем и парсим payload
+                    payload = json.loads(message["data"])
+                    
+                    # Извлекаем получателя и данные
+                    recipient_id = int(payload.get("recipient_user_id"))
+                    message_to_send = {
+                        "type": payload.get("type"),
+                        "data": payload.get("data")
+                    }
+                    
+                    # Используем наш ConnectionManager для отправки
+                    await notification_manager.send_personal_message(
+                        recipient_id, message_to_send
+                    )
+                except (json.JSONDecodeError, KeyError, ValueError) as e:
+                    logger.error(f"Не удалось обработать сообщение из Pub/Sub: {e}")
+            await asyncio.sleep(0.01) # Небольшая пауза, чтобы не загружать ЦП
+    except asyncio.CancelledError:
+        logger.info("Слушатель Pub/Sub остановлен.")
+    finally:
+        await pubsub.close()
+        logger.info("Подписка на Redis Pub/Sub закрыта.")
 
 
 @asynccontextmanager
@@ -21,12 +68,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Контекстный менеджер для управления жизненным циклом приложения.
     Выполняется при старте и остановке приложения.
     """
-    logging.info("Application startup...")
-    logging.info("Redis pool created.")
+    logger.info("Application startup...")
+    
+    # Запускаем слушателя Pub/Sub как фоновую задачу
+    listener_task = asyncio.create_task(redis_pubsub_listener())
+    
     yield
+    
+    # При остановке приложения отменяем задачу
+    logger.info("Application shutdown...")
+    listener_task.cancel()
+    # Ожидаем завершения задачи
+    await listener_task
+    
     await redis_pool.disconnect()
-    logging.info("Redis pool disconnected.")
-    logging.info("Application shutdown.")
+    logger.info("Redis pool disconnected.")
 
 
 app = FastAPI(

@@ -6,7 +6,7 @@ from redis.asyncio import Redis
 from src.core.redis import get_redis_client
 from src.schemas.driver import DriverPresenceSchema
 from src.services.driver_profile_service import DriverProfileService
-from .dependencies import get_current_driver_id_stub
+from .dependencies import get_current_user_id_stub
 
 router = APIRouter(prefix="/drivers", tags=["Drivers"])
 
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/drivers", tags=["Drivers"])
 )
 async def update_driver_presence(
     presence_data: DriverPresenceSchema,
-    driver_id: int = Depends(get_current_driver_id_stub),
+    driver_id: int = Depends(get_current_user_id_stub),
     redis_client: Redis = Depends(get_redis_client),
 ):
     """
