@@ -1,0 +1,178 @@
+# ИЗМЕНЕНО + ДОПОЛНЕНО
+"""
+Сервис для управления поездками (Rides).
+- создание поездки
+- назначение водителя
+- обновление статуса
+- история поездок
+- публикация событий OrderCreated / DriverAssigned / RideCompleted
+"""
+
+from typing import Dict, Any, List
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.ride import Ride, RideStatusEnum
+from src.schemas.ride import (
+    RideCreateSchema,
+    RideResponseSchema,
+)
+from src.services.pricing_service import calculate_price_and_eta
+from src.services.redis_publisher import (
+    publish_order_created,
+    publish_driver_assigned,
+    publish_ride_completed,
+)
+
+
+# ============================================================
+# 1) СОЗДАНИЕ ПОЕЗДКИ (УЖЕ БЫЛО)
+# ============================================================
+async def create_ride(
+    ride_data: RideCreateSchema,
+    passenger_user_id: int,
+    db: AsyncSession
+) -> RideResponseSchema:
+
+    pricing = calculate_price_and_eta(
+        start_x=ride_data.start_x,
+        start_y=ride_data.start_y,
+        end_x=ride_data.end_x,
+        end_y=ride_data.end_y,
+    )
+
+    new_ride = Ride(
+        passenger_user_id=passenger_user_id,
+        start_x=ride_data.start_x,
+        start_y=ride_data.start_y,
+        end_x=ride_data.end_x,
+        end_y=ride_data.end_y,
+        status=RideStatusEnum.PENDING.value,
+        price=pricing["price"],
+    )
+    db.add(new_ride)
+    await db.commit()
+    await db.refresh(new_ride)
+
+    # Публикация OrderCreated
+    payload: Dict[str, Any] = {
+        "ride_id": str(new_ride.id),
+        "passenger_user_id": str(new_ride.passenger_user_id),
+        "start_x": new_ride.start_x,
+        "start_y": new_ride.start_y,
+        "end_x": new_ride.end_x,
+        "end_y": new_ride.end_y,
+        "price": float(pricing["price"]),
+        "eta_seconds": float(pricing["eta_seconds"]),
+        "status": new_ride.status,
+        "created_at": new_ride.created_at.isoformat() if new_ride.created_at else None
+    }
+
+    try:
+        await publish_order_created(payload)
+    except Exception:
+        pass
+
+    return RideResponseSchema(
+        ride_id=str(new_ride.id),
+        estimated_price=float(new_ride.price),
+        status=new_ride.status
+    )
+
+
+# ============================================================
+# 2) ПРИНЯТИЕ ПОЕЗДКИ ВОДИТЕЛЕМ
+# ============================================================
+async def assign_driver(
+    ride_id: str,
+    driver_user_id: int,
+    db: AsyncSession
+) -> RideResponseSchema:
+
+    ride = await db.get(Ride, int(ride_id))
+    if not ride:
+        raise ValueError("Ride not found")
+
+    ride.driver_user_id = driver_user_id
+    ride.status = RideStatusEnum.DRIVER_ASSIGNED.value
+    ride.version += 1
+
+    await db.commit()
+    await db.refresh(ride)
+
+    # Публикуем DriverAssigned
+    payload = {
+        "ride_id": str(ride.id),
+        "driver_user_id": str(driver_user_id),
+        "status": ride.status
+    }
+    try:
+        await publish_driver_assigned(payload)
+    except Exception:
+        pass
+
+    return RideResponseSchema(
+        ride_id=str(ride.id),
+        estimated_price=float(ride.price),
+        status=ride.status
+    )
+
+
+# ============================================================
+# 3) ОБНОВЛЕНИЕ СТАТУСА ПОЕЗДКИ
+# ============================================================
+async def update_ride_status(
+    ride_id: str,
+    new_status: str,
+    db: AsyncSession
+) -> RideResponseSchema:
+
+    ride = await db.get(Ride, int(ride_id))
+    if not ride:
+        raise ValueError("Ride not found")
+
+    ride.status = new_status
+    ride.version += 1
+    await db.commit()
+    await db.refresh(ride)
+
+    # Если поездка завершена → публикуем RideCompleted
+    if new_status == RideStatusEnum.COMPLETED.value:
+        payload = {
+            "ride_id": str(ride.id),
+            "status": ride.status
+        }
+        try:
+            await publish_ride_completed(payload)
+        except Exception:
+            pass
+
+    return RideResponseSchema(
+        ride_id=str(ride.id),
+        estimated_price=float(ride.price),
+        status=ride.status
+    )
+
+
+# ============================================================
+# 4) ИСТОРИЯ ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ
+# ============================================================
+async def get_user_rides(
+    user_id: int,
+    db: AsyncSession
+) -> List[RideResponseSchema]:
+
+    result = await db.execute(
+        select(Ride).where(Ride.passenger_user_id == user_id)
+    )
+    rides = result.scalars().all()
+
+    return [
+        RideResponseSchema(
+            ride_id=str(r.id),
+            estimated_price=float(r.price),
+            status=r.status
+        )
+        for r in rides
+    ]

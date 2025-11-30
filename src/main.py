@@ -17,6 +17,9 @@ from src.services.notification_service import notification_manager
 import redis.asyncio as aioredis 
 from src.core.logging_config import setup_logging, RequestIdFilter
 
+from src.api.v1 import auth as auth_v1
+from src.api.v1 import rides as rides_v1
+
 # ContextVar для хранения request_id в рамках одного запроса
 request_id_var = ContextVar("request_id", default="N/A")
 
@@ -118,8 +121,16 @@ async def add_request_id_middleware(request: Request, call_next):
 app.include_router(drivers_v1.router, prefix="/api/v1")
 app.include_router(notifications_v1.router, prefix="/api/v1")
 
+# НОВОЕ: подключение наших эндпоинтов Core & Orders
+app.include_router(auth_v1.router, prefix="/api/v1", tags=["Auth"])
+app.include_router(rides_v1.router, prefix="/api/v1", tags=["Rides"])
 
 @app.get("/healthcheck", tags=["Healthcheck"])
 async def healthcheck():
     """Проверка доступности сервиса."""
-    return {"status": "ok"}
+    return {"status": "ok"}    
+
+
+
+
+

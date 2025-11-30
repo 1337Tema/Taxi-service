@@ -1,6 +1,13 @@
+# ИЗМЕНЕНО (вставлены новые поля для pricing)
 """Модуль для управления настройками приложения с использованием Pydantic."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import ConfigDict  # добавляем этот импорт
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # загружает переменные из .env в окружение
+
 
 class Settings(BaseSettings):
     """
@@ -35,12 +42,17 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
-    model_config = SettingsConfigDict(
+
+    # --- НОВОЕ: параметры ценообразования ---
+    PRICE_BASE_FARE: float = 50.0       # базовая стоимость
+    PRICE_PER_CELL: float = 5.0         # стоимость за 1 ячейку (манхэттен)
+    PRICE_T_CELL: float = 10.0          # время (в секундах) на 1 ячейку
+
+    model_config = ConfigDict(
         env_file=(".env", ".env.local"),
-        env_file_encoding="utf-8", 
+        env_file_encoding="utf-8",
         extra="ignore"
     )
 
-# Создаем синглтон-экземпляр настроек
+# Синглтон настроек
 settings = Settings()
