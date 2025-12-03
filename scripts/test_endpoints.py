@@ -5,11 +5,11 @@
 import asyncio
 import httpx
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 
 async def test_endpoints():
     """Проверяет доступность всех основных эндпоинтов"""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(trust_env=False) as client:
         print("🔍 Проверка доступности API эндпоинтов...")
         print("=" * 50)
         
