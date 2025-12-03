@@ -13,6 +13,6 @@ httpx
 alembic
 redis
 email-validator
-jwt
+PyJWT
 python-json-logger
 

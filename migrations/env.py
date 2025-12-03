@@ -16,6 +16,7 @@ from src.core.db import Base
 from src.core.config import settings
 from src.models.user import User
 from src.models.driver import Driver
+from src.models.passenger import Passenger
 from src.models.ride import Ride
 
 # Alembic Config

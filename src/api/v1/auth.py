@@ -10,7 +10,7 @@ from src.schemas.user import UserCreateSchema, UserLoginSchema, TokenSchema
 from src.services.user_service import register_user, authenticate_user, create_access_token
 from src.core.db import get_async_session
 
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenSchema, status_code=status.HTTP_201_CREATED)

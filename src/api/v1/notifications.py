@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 from src.services.notification_service import notification_manager
-from .dependencies import get_current_user_id_stub
+from .dependencies import get_current_user_id_websocket
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    user_id: int = Depends(get_current_user_id_stub)
+    user_id: int = Depends(get_current_user_id_websocket)
 ):
     """
     Основной эндпоинт для WebSocket-соединений.

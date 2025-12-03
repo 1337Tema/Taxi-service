@@ -1,4 +1,4 @@
-"""Initial migration with unique index for active rides."""
+"""Initial migration with all tables and proper ENUM types."""
 
 from alembic import op
 import sqlalchemy as sa
@@ -11,20 +11,32 @@ branch_labels = None
 depends_on = None
 
 def upgrade() -> None:
+    # Создаем ENUM типы
+    driver_status = sa.Enum('offline', 'online', 'busy', name='driver_status')
+    driver_status.create(op.get_bind())
+    
+    ride_status = sa.Enum(
+        'pending', 'driver_assigned', 'driver_arrived', 'passenger_onboard',
+        'in_progress', 'completed', 'cancelled', name='ride_status'
+    )
+    ride_status.create(op.get_bind())
+
     # Таблица users
     op.create_table(
         "users",
         sa.Column("id", sa.BigInteger, primary_key=True),
         sa.Column("email", sa.String(255), nullable=False, unique=True),
         sa.Column("hashed_password", sa.String(255), nullable=False),
+        sa.Column("role", sa.String(20), nullable=False, server_default="passenger"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
 
     # Таблица drivers
     op.create_table(
         "drivers",
-        sa.Column("id", sa.Integer, sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("status", sa.String(16), nullable=False, server_default="offline"),
+        sa.Column("id", sa.BigInteger, sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+        sa.Column("status", driver_status, nullable=False, server_default="offline"),
         sa.Column("x", sa.Integer, nullable=False, server_default="0"),
         sa.Column("y", sa.Integer, nullable=False, server_default="0"),
         sa.Column("last_online", sa.DateTime(timezone=True), nullable=True),
@@ -32,13 +44,19 @@ def upgrade() -> None:
     op.create_check_constraint("chk_driver_x_range", "drivers", "x >= 0 AND x < 100")
     op.create_check_constraint("chk_driver_y_range", "drivers", "y >= 0 AND y < 100")
 
+    # Таблица passengers
+    op.create_table(
+        "passengers",
+        sa.Column("id", sa.BigInteger, sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    )
+
     # Таблица rides
     op.create_table(
         "rides",
         sa.Column("id", sa.BigInteger, primary_key=True),
         sa.Column("passenger_user_id", sa.BigInteger, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("driver_user_id", sa.BigInteger, sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("status", sa.String(32), nullable=False, server_default="pending"),
+        sa.Column("status", ride_status, nullable=False, server_default="pending"),
         sa.Column("start_x", sa.Integer, nullable=False),
         sa.Column("start_y", sa.Integer, nullable=False),
         sa.Column("end_x", sa.Integer, nullable=False),
@@ -61,5 +79,13 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("uq_driver_active_ride", table_name="rides")
     op.drop_table("rides")
+    op.drop_table("passengers")
     op.drop_table("drivers")
     op.drop_table("users")
+    
+    # Удаляем ENUM типы
+    ride_status = sa.Enum(name='ride_status')
+    ride_status.drop(op.get_bind())
+    
+    driver_status = sa.Enum(name='driver_status')
+    driver_status.drop(op.get_bind())

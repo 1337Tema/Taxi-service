@@ -14,7 +14,7 @@ from src.schemas.ride import (
     RideStatusUpdateSchema,
 )
 from src.core.db import get_async_session
-from src.api.v1.dependencies import get_current_user_id_stub
+from src.api.v1.dependencies import get_current_user_id
 
 from src.services.rides_service import (
     create_ride as create_ride_service,
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/rides", tags=["Rides"])
 async def create_ride(
     ride_data: RideCreateSchema,
     db: AsyncSession = Depends(get_async_session),
-    current_user_id: int = Depends(get_current_user_id_stub),
+    current_user_id: int = Depends(get_current_user_id),
 ):
     try:
         return await create_ride_service(
@@ -48,7 +48,7 @@ async def create_ride(
 async def accept_ride(
     ride_id: str,
     db: AsyncSession = Depends(get_async_session),
-    current_user_id: int = Depends(get_current_user_id_stub),
+    current_user_id: int = Depends(get_current_user_id),
 ):
     try:
         return await assign_driver_service(
@@ -81,7 +81,7 @@ async def update_ride_status(
 @router.get("/history", response_model=List[RideResponseSchema])
 async def get_user_rides(
     db: AsyncSession = Depends(get_async_session),
-    current_user_id: int = Depends(get_current_user_id_stub),
+    current_user_id: int = Depends(get_current_user_id),
 ):
     try:
         return await get_user_rides_service(
