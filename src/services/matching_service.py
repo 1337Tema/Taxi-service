@@ -206,13 +206,22 @@ class DriverMatchingService:
 
         while self._running:
             try:
-                response = await self.redis.xreadgroup(
-                    groupname=self.CONSUMER_GROUP,
-                    consumername="consumer-1",
-                    streams={self.STREAM_KEY: ">"},
-                    count=1,
-                    block=0,
-                )
+                try:
+                    response = await self.redis.xreadgroup(
+                        groupname=self.CONSUMER_GROUP,
+                        consumername="consumer-1",
+                        streams={self.STREAM_KEY: ">"},
+                        count=1,
+                        block=0,
+                    )
+                except Exception as e:
+                    # Если получаем ошибку NOGROUP (группа удалена), пересоздаем её
+                    if "NOGROUP" in str(e):
+                        logger.warning("Группа потребителей не найдена (был flushdb?). Пересоздаем...")
+                        await self._ensure_consumer_group()
+                        continue
+                    # Если другая ошибка — пробрасываем дальше
+                    raise e
 
                 if not response:
                     continue
@@ -229,7 +238,6 @@ class DriverMatchingService:
                     ride_id = data['ride_id']
                 except (KeyError, ValueError) as e:
                     logger.error(f"Некорректные данные в сообщении о заказе {message_id}: {e}")
-                    # Подтверждаем "битое" сообщение, чтобы оно не блокировало очередь
                     await self.redis.xack(self.STREAM_KEY, self.CONSUMER_GROUP, message_id)
                     continue
 
@@ -237,8 +245,7 @@ class DriverMatchingService:
 
                 if driver_id:
                     logger.info(f"Найден и заблокирован водитель: ID {driver_id} для заказа {ride_id}")
-                    
-                    # Формируем сообщение для NotificationService
+
                     notification_payload = {
                         "type": "NEW_ORDER_PROPOSAL",
                         "recipient_user_id": driver_id,
@@ -246,41 +253,27 @@ class DriverMatchingService:
                             "ride_id": ride_id,
                             "start_x": start_x,
                             "start_y": start_y,
-                            # TODO: Добавить сюда end_x, end_y, price, когда они будут в сообщении
                         }
                     }
-                    
-                    # Публикуем сообщение в канал Pub/Sub
+
                     await self.redis.publish(
                         self.NOTIFICATION_CHANNEL,
                         json.dumps(notification_payload)
                     )
-                    logger.info(f"Событие-уведомление для водителя {driver_id} опубликовано в канал {self.NOTIFICATION_CHANNEL}")
-
-                    # Добавляем запись в ZSET для отслеживания таймаута
+                    
                     proposal_member = f"{ride_id}:{driver_id}"
                     timeout_score = int(time.time() + self.PROPOSAL_TIMEOUT)
                     await self.redis.zadd(self.TIMEOUT_ZSET_KEY, {proposal_member: timeout_score})
-                    logger.info(f"Предложение для водителя {driver_id} добавлено в очередь таймаутов со сроком {timeout_score}")
                     
                     await self.redis.xack(self.STREAM_KEY, self.CONSUMER_GROUP, message_id)
                     logger.info(f"Заказ {ride_id} успешно обработан и подтвержден.")
 
                 else:
                     logger.warning(f"Не удалось найти водителя для заказа {data.get('ride_id')}. Заказ остается в очереди.")
-                    # TODO: Реализовать логику постановки в очередь ожидания
-                    # Пока просто оставляем сообщение необработанным (не делаем xack)
-                    # Оно будет передоставлено другому консьюмеру через некоторое время
-                    await asyncio.sleep(10) # Ждем перед следующей попыткой
+                    await asyncio.sleep(1) # Ждем перед следующей попыткой
                     continue
 
-                # TODO: Шаг 9 - Реализовать логику блокировки
-
-                await self.redis.xack(self.STREAM_KEY, self.CONSUMER_GROUP, message_id)
-                logger.info(f"Заказ {data.get('ride_id')} успешно обработан и подтвержден.")
-
             except asyncio.CancelledError:
-                # Это исключение возникает, когда задача отменяется (например, при остановке)
                 logger.info("Цикл обработки остановлен.")
                 break
             except Exception as e:
