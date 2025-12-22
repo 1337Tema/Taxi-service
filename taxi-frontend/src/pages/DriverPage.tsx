@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { wsService } from '../api/websocket';
 import { GridMap } from '../components/GridMap';
+import { OrderProposalModal } from '../components/OrderProposalModal';
 
 export const DriverPage = ({ onBack }: { onBack: () => void }) => {
   const [isOnline, setIsOnline] = useState(false);
@@ -8,10 +10,10 @@ export const DriverPage = ({ onBack }: { onBack: () => void }) => {
   const [status, setStatus] = useState('offline');
   const [lastUpdate, setLastUpdate] = useState<string>('-');
   
-  const [inputRideId, setInputRideId] = useState('');
   const [activeRide, setActiveRide] = useState<any>(null);
+  const [incomingOrder, setIncomingOrder] = useState<any>(null);
 
-  // Валидация координат 0..99
+  // Валидация координат
   const updateCoord = (axis: 'x' | 'y', value: string) => {
     let val = parseInt(value);
     if (isNaN(val)) val = 0;
@@ -35,33 +37,35 @@ export const DriverPage = ({ onBack }: { onBack: () => void }) => {
     if (isOnline) {
       sendHeartbeat();
       intervalId = setInterval(sendHeartbeat, 3000);
+      
+      // WebSocket подключение
+      wsService.connect();
+      const unsubscribe = wsService.subscribe((msg) => {
+        if (msg.type === 'NEW_ORDER_PROPOSAL') {
+          console.log("🔔 Получен заказ:", msg.data);
+          setIncomingOrder(msg.data);
+        }
+      });
+
+      return () => {
+        clearInterval(intervalId);
+        unsubscribe();
+        wsService.disconnect();
+      };
     } else {
       setStatus('offline');
     }
-    return () => clearInterval(intervalId);
   }, [isOnline, location]);
 
-  const acceptRide = async () => {
-    if (!inputRideId) return;
+  const handleAcceptOrder = async () => {
+    if (!incomingOrder) return;
     try {
-      const res = await api.post(`/rides/${inputRideId}/accept`);
-      const rideData = res.data;
-
-      if (rideData.status === 'completed' || rideData.status === 'cancelled') {
-        alert("⛔ Этот заказ уже завершен или отменен!");
-        setInputRideId('');
-        return;
-      }
-
-      setActiveRide(rideData);
-      alert("Вы приняли заказ! Маршрут загружен на карту.");
-    } catch (e: any) {
-      console.error(e);
-      if (e.response && e.response.status === 404) {
-        alert("Заказ с таким ID не найден.");
-      } else {
-        alert("Ошибка. Возможно, заказ уже занят.");
-      }
+      const res = await api.post(`/rides/${incomingOrder.ride_id}/accept`);
+      setActiveRide(res.data);
+      setIncomingOrder(null);
+    } catch (e) {
+      alert("Не удалось принять заказ.");
+      setIncomingOrder(null);
     }
   };
 
@@ -71,9 +75,8 @@ export const DriverPage = ({ onBack }: { onBack: () => void }) => {
       const res = await api.put(`/rides/${activeRide.ride_id}/status`, { status: newStatus });
       setActiveRide(res.data);
       if (newStatus === 'completed') {
-        alert("Поездка завершена! Вы свободны.");
+        alert("Поездка завершена!");
         setActiveRide(null);
-        setInputRideId('');
       }
     } catch (e) {
       alert("Ошибка обновления статуса");
@@ -82,6 +85,13 @@ export const DriverPage = ({ onBack }: { onBack: () => void }) => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      {/* Модалка с уведомлением */}
+      <OrderProposalModal 
+        order={incomingOrder}
+        onAccept={handleAcceptOrder}
+        onDecline={() => setIncomingOrder(null)}
+      />
+
       <div className="max-w-7xl mx-auto flex justify-between items-center mb-6">
         <button onClick={onBack} className="bg-white px-4 py-2 rounded-lg text-gray-700">← Меню</button>
         <div className={`flex items-center gap-3 px-4 py-2 rounded-lg ${isOnline ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
@@ -91,8 +101,6 @@ export const DriverPage = ({ onBack }: { onBack: () => void }) => {
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-        
-        {/* КАРТА */}
         <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-xl flex flex-col items-center justify-center min-h-[500px]">
           <h2 className="text-xl font-bold text-gray-800 mb-4 self-start">🗺️ Навигация по городу</h2>
           <div className="w-full h-full flex items-center justify-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
@@ -109,10 +117,8 @@ export const DriverPage = ({ onBack }: { onBack: () => void }) => {
           </div>
         </div>
 
-        {/* ПАНЕЛЬ */}
         <div className="bg-white p-6 rounded-3xl shadow-xl h-fit sticky top-4">
           <h2 className="text-xl font-bold text-gray-800 mb-6">⚙️ Управление</h2>
-
           <div className="bg-blue-50 p-5 rounded-2xl mb-6 border border-blue-100">
             <label className="block text-blue-800 text-sm font-bold mb-3">ТЕКУЩИЕ КООРДИНАТЫ</label>
             <div className="flex gap-4">
@@ -133,12 +139,10 @@ export const DriverPage = ({ onBack }: { onBack: () => void }) => {
           ) : (
             <div className="space-y-6">
               {!activeRide && (
-                <div className="bg-yellow-50 p-5 rounded-2xl border border-yellow-200">
-                  <h3 className="font-bold text-yellow-800 mb-3">📡 Ожидание заказа...</h3>
-                  <div className="flex gap-2">
-                    <input value={inputRideId} onChange={e => setInputRideId(e.target.value)} placeholder="Введите ID заказа" className="w-full p-3 border border-yellow-300 rounded-xl" />
-                    <button onClick={acceptRide} className="bg-blue-600 text-white px-6 rounded-xl font-bold hover:bg-blue-700">OK</button>
-                  </div>
+                <div className="bg-green-50 p-6 rounded-2xl border border-green-200 text-center animate-pulse">
+                  <div className="text-4xl mb-2">📡</div>
+                  <h3 className="font-bold text-green-800">Поиск заказов...</h3>
+                  <p className="text-sm text-green-600">Ожидайте уведомления</p>
                 </div>
               )}
 

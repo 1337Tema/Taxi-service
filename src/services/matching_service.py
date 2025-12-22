@@ -227,15 +227,37 @@ class DriverMatchingService:
                     continue
 
                 stream_key, messages = response[0]
-                message_id, data = messages[0]
+                message_id, raw_data = messages[0]
 
-                logger.info(f"Получен новый заказ {data} с ID {message_id}")
+                logger.info(f"Получен новый заказ {raw_data} с ID {message_id}")
 
                 try:
+                    # --- ИСПРАВЛЕНИЕ: ПРОВЕРКА ТИПА ДАННЫХ ---
+                    raw_payload = raw_data['data']
+                    
+                    if isinstance(raw_payload, str):
+                        data = json.loads(raw_payload) # Если строка - парсим
+                    elif isinstance(raw_payload, dict):
+                        data = raw_payload # Если словарь - берем так
+                    else:
+                        logger.error(f"Unknown data type: {type(raw_payload)}")
+                        await self.redis.xack(self.STREAM_KEY, self.CONSUMER_GROUP, message_id)
+                        continue
+
+                    # Проверка типа события
+                    event_type = raw_data.get('event', data.get('event'))
+                    
+                    if event_type != 'OrderCreated':
+                        await self.redis.xack(self.STREAM_KEY, self.CONSUMER_GROUP, message_id)
+                        continue
                     # Валидируем, что данные о координатах пришли
                     start_x = int(data['start_x'])
                     start_y = int(data['start_y'])
                     ride_id = data['ride_id']
+                    end_x = int(data.get('end_x', 0))
+                    end_y = int(data.get('end_y', 0))
+                    price = data.get('price', 0)
+                    
                 except (KeyError, ValueError) as e:
                     logger.error(f"Некорректные данные в сообщении о заказе {message_id}: {e}")
                     await self.redis.xack(self.STREAM_KEY, self.CONSUMER_GROUP, message_id)
@@ -253,6 +275,10 @@ class DriverMatchingService:
                             "ride_id": ride_id,
                             "start_x": start_x,
                             "start_y": start_y,
+                            #Асель-ДОБАВЛЕНО
+                            "end_x": int(data['end_x']), 
+                            "end_y": int(data['end_y']),
+                            "price": data.get('price', 0)
                         }
                     }
 

@@ -11,7 +11,9 @@ from redis.asyncio import Redis
 from src.core.redis import redis_pool
 
 
-STREAM_ORDERS = "orders:stream"
+# Асель-ИСПРАВЛЕНО: Было "orders:stream", стало "order_events"
+# Теперь название совпадает с тем, что ждет Matching Service
+STREAM_ORDERS = "order_events"
 
 
 async def _get_redis_client() -> Redis:

@@ -25,10 +25,22 @@ from src.services.redis_publisher import (
     publish_driver_assigned,
     publish_ride_completed,
 )
-
+# Асель - ДОБАВЛЕНО: Вспомогательная функция для создания ответа
+def _build_ride_response(ride: Ride) -> RideResponseSchema:
+    return RideResponseSchema(
+        ride_id=str(ride.id),
+        estimated_price=float(ride.price),
+        status=ride.status,
+        # --- ВОТ ЭТИ ПОЛЯ МЫ РАНЬШЕ ЗАБЫВАЛИ ЗАПОЛНЯТЬ ---
+        start_x=ride.start_x,
+        start_y=ride.start_y,
+        end_x=ride.end_x,
+        end_y=ride.end_y
+        # -------------------------------------------------
+    )
 
 # ============================================================
-# 1) СОЗДАНИЕ ПОЕЗДКИ (УЖЕ БЫЛО)
+# 1) СОЗДАНИЕ ПОЕЗДКИ 
 # ============================================================
 async def create_ride(
     ride_data: RideCreateSchema,
@@ -75,15 +87,7 @@ async def create_ride(
     except Exception:
         pass
 
-    return RideResponseSchema(
-        ride_id=str(new_ride.id),
-        estimated_price=float(new_ride.price),
-        status=new_ride.status,
-        start_x=new_ride.start_x,
-        start_y=new_ride.start_y,
-        end_x=new_ride.end_x,
-        end_y=new_ride.end_y,
-    )
+    return _build_ride_response(new_ride)
 
 
 # ============================================================
@@ -124,15 +128,7 @@ async def assign_driver(
     except Exception:
         pass
 
-    return RideResponseSchema(
-        ride_id=str(ride.id),
-        estimated_price=float(ride.price),
-        status=ride.status,
-        start_x=ride.start_x,
-        start_y=ride.start_y,
-        end_x=ride.end_x,
-        end_y=ride.end_y,
-    )
+    return _build_ride_response(ride)
 
 
 # ============================================================
@@ -164,15 +160,7 @@ async def update_ride_status(
         except Exception:
             pass
 
-    return RideResponseSchema(
-        ride_id=str(ride.id),
-        estimated_price=float(ride.price),
-        status=ride.status,
-        start_x=ride.start_x,
-        start_y=ride.start_y,
-        end_x=ride.end_x,
-        end_y=ride.end_y,
-    )
+    return _build_ride_response(ride)
 
 
 # ============================================================
@@ -188,15 +176,4 @@ async def get_user_rides(
     )
     rides = result.scalars().all()
 
-    return [
-        RideResponseSchema(
-            ride_id=str(r.id),
-            estimated_price=float(r.price),
-            status=r.status,
-            start_x=r.start_x,
-            start_y=r.start_y,
-            end_x=r.end_x,
-            end_y=r.end_y,
-        )
-        for r in rides
-    ]
+    return [_build_ride_response(r) for r in rides]

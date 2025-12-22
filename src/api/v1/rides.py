@@ -46,34 +46,40 @@ async def create_ride(
 # POST /rides/{id}/accept — водитель принимает заказ
 @router.post("/{ride_id}/accept", response_model=RideResponseSchema)
 async def accept_ride(
-    ride_id: str,
+    ride_id: int, #Асель - <--- ИЗМЕНЕНО: Было str, стало int (FastAPI сам преобразует)
     db: AsyncSession = Depends(get_async_session),
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
         return await assign_driver_service(
-            ride_id=ride_id,
+            ride_id=str(ride_id),
             driver_user_id=current_user_id,
             db=db
         )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as exc:
+        print(f"Error accepting ride: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 # PUT /rides/{id}/status — обновление статуса (оба могут)
 @router.put("/{ride_id}/status", response_model=RideResponseSchema)
 async def update_ride_status(
-    ride_id: str,
+    ride_id: int, # Асель - <--- ИЗМЕНЕНО: int
     status_update: RideStatusUpdateSchema,
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
         return await update_status_service(
-            ride_id=ride_id,
+            ride_id=str(ride_id),
             new_status=status_update.status,
             db=db
         )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as exc:
+        print(f"Error updating status: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -89,4 +95,5 @@ async def get_user_rides(
             db=db
         )
     except Exception as exc:
+        print(f"Error getting history: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
