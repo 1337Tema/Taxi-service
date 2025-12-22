@@ -31,7 +31,7 @@ def _build_ride_response(ride: Ride) -> RideResponseSchema:
         ride_id=str(ride.id),
         estimated_price=float(ride.price),
         status=ride.status,
-        # --- ВОТ ЭТИ ПОЛЯ МЫ РАНЬШЕ ЗАБЫВАЛИ ЗАПОЛНЯТЬ ---
+        
         start_x=ride.start_x,
         start_y=ride.start_y,
         end_x=ride.end_x,

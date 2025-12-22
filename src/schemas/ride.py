@@ -16,10 +16,10 @@ class RideCreateSchema(BaseModel):
     end_x: conint(ge=0) = Field(..., description="Координата X точки назначения")
     end_y: conint(ge=0) = Field(..., description="Координата Y точки назначения")
 
-    start_x: Optional[int] = None
+    '''start_x: Optional[int] = None
     start_y: Optional[int] = None
     end_x: Optional[int] = None
-    end_y: Optional[int] = None
+    end_y: Optional[int] = None'''
 
 class RideResponseSchema(BaseModel):
     """
@@ -28,6 +28,12 @@ class RideResponseSchema(BaseModel):
     ride_id: str = Field(..., description="Уникальный идентификатор поездки")
     estimated_price: float = Field(..., description="Предварительная стоимость поездки")
     status: str = Field(..., description="Текущий статус поездки")
+
+    start_x: int
+    start_y: int
+    end_x: int
+    end_y: int
+
 
 
 class RideStatusUpdateSchema(BaseModel):
