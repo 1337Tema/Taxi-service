@@ -4,7 +4,7 @@ Pydantic схемы для работы с заказами (rides).
 """
 
 from pydantic import BaseModel, Field, conint
-from typing import Literal
+from typing import Literal, Optional
 
 
 class RideCreateSchema(BaseModel):
@@ -16,6 +16,10 @@ class RideCreateSchema(BaseModel):
     end_x: conint(ge=0) = Field(..., description="Координата X точки назначения")
     end_y: conint(ge=0) = Field(..., description="Координата Y точки назначения")
 
+    start_x: Optional[int] = None
+    start_y: Optional[int] = None
+    end_x: Optional[int] = None
+    end_y: Optional[int] = None
 
 class RideResponseSchema(BaseModel):
     """

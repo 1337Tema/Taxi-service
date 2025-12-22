@@ -9,6 +9,7 @@
 """
 
 from typing import Dict, Any, List
+from fastapi import HTTPException, status
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,7 +78,11 @@ async def create_ride(
     return RideResponseSchema(
         ride_id=str(new_ride.id),
         estimated_price=float(new_ride.price),
-        status=new_ride.status
+        status=new_ride.status,
+        start_x=new_ride.start_x,
+        start_y=new_ride.start_y,
+        end_x=new_ride.end_x,
+        end_y=new_ride.end_y,
     )
 
 
@@ -92,8 +97,15 @@ async def assign_driver(
 
     ride = await db.get(Ride, int(ride_id))
     if not ride:
-        raise ValueError("Ride not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поездка не найдена")
 
+    # НОВОЕ: Проверка статуса. Принять можно только ожидающий заказ.
+    if ride.status != RideStatusEnum.PENDING.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Невозможно принять заказ. Его текущий статус: '{ride.status}'"
+        )
+    
     ride.driver_user_id = driver_user_id
     ride.status = RideStatusEnum.DRIVER_ASSIGNED.value
     ride.version += 1
@@ -115,7 +127,11 @@ async def assign_driver(
     return RideResponseSchema(
         ride_id=str(ride.id),
         estimated_price=float(ride.price),
-        status=ride.status
+        status=ride.status,
+        start_x=ride.start_x,
+        start_y=ride.start_y,
+        end_x=ride.end_x,
+        end_y=ride.end_y,
     )
 
 
@@ -151,7 +167,11 @@ async def update_ride_status(
     return RideResponseSchema(
         ride_id=str(ride.id),
         estimated_price=float(ride.price),
-        status=ride.status
+        status=ride.status,
+        start_x=ride.start_x,
+        start_y=ride.start_y,
+        end_x=ride.end_x,
+        end_y=ride.end_y,
     )
 
 
@@ -172,7 +192,11 @@ async def get_user_rides(
         RideResponseSchema(
             ride_id=str(r.id),
             estimated_price=float(r.price),
-            status=r.status
+            status=r.status,
+            start_x=r.start_x,
+            start_y=r.start_y,
+            end_x=r.end_x,
+            end_y=r.end_y,
         )
         for r in rides
     ]

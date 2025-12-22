@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 import asyncio
 import json
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import logging
 from contextvars import ContextVar
@@ -103,6 +104,19 @@ app = FastAPI(
     description="Сервис для заказа такси в сеточном городе N×M",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+origins = [
+    "http://localhost:5173",  # Адрес вашего React-приложения
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 @app.middleware("http")
