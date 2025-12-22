@@ -1,73 +1,74 @@
-# React + TypeScript + Vite
+# 🚖 Taxi Grid Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Клиентское веб-приложение для сервиса заказа такси "Taxi Grid".
+Реализует интерфейсы для двух ролей: **Пассажир** и **Водитель**, обеспечивая взаимодействие с сервером в реальном времени.
 
-Currently, two official plugins are available:
+## 🛠 Технологический стек
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+*   **Core:** React 18, TypeScript
+*   **Build Tool:** Vite (быстрая сборка и HMR)
+*   **Styling:** Tailwind CSS (адаптивная верстка)
+*   **Routing:** React Router DOM
+*   **API Client:** Axios (REST API)
+*   **Real-time:** Native WebSocket API
 
-## React Compiler
+## ✨ Ключевые возможности
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🗺️ Интерактивная карта (GridMap)
+*   Визуализация города в виде сетки $N \times M$.
+*   Отображение статических объектов (Университет, Вокзал и т.д.).
+*   Визуализация маршрута (точки подачи и назначения).
+*   Анимация перемещения автомобиля водителя.
 
-## Expanding the ESLint configuration
+### 🙋‍♂️ Режим Пассажира
+*   Выбор точек маршрута кликом по карте.
+*   Расчет стоимости поездки перед заказом.
+*   Отслеживание статуса заказа в реальном времени (`PENDING` -> `DRIVER ASSIGNED` -> `IN PROGRESS` -> `COMPLETED`).
+*   Форма оценки поездки после завершения.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 👨‍✈️ Режим Водителя
+*   Панель управления статусом ("Выйти на линию" / "Уйти с линии").
+*   **WebSocket уведомления:** Всплывающее окно при поступлении нового заказа.
+*   Отображение маршрута на карте после принятия заказа.
+*   Управление этапами поездки ("Я приехал", "Начать поездку", "Завершить").
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🚀 Запуск проекта
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Предварительные требования
+*   Установленный **Node.js** (версия 16+).
+*   Запущенный Backend (Docker containers).
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Установка зависимостей
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Запуск в режиме разработки
+```bash
+npm run dev
+```
+Приложение будет доступно по адресу: `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📂 Структура проекта
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+├── api/            # Взаимодействие с бэкендом
+│   ├── client.ts   # Настройка Axios (интерцепторы, базовый URL)
+│   └── websocket.ts# Сервис для работы с WebSocket (подписка на события)
+├── components/     # UI компоненты
+│   ├── GridMap.tsx # Основной компонент карты с логикой рендеринга
+│   └── OrderProposalModal.tsx # Модальное окно принятия заказа
+├── pages/          # Страницы приложения
+│   ├── AuthPage.tsx      # Вход и Регистрация
+│   ├── DashboardPage.tsx # Выбор роли
+│   ├── DriverPage.tsx    # Кабинет водителя
+│   └── PassengerPage.tsx # Кабинет пассажира
+└── App.tsx         # Корневой компонент с роутингом
+```
+
+## 🔗 Взаимодействие с API
+
+Приложение ожидает, что Backend API запущен на `http://127.0.0.1:8000`.
+Для WebSocket соединений используется адрес `ws://127.0.0.1:8000/api/v1/notifications/ws`.
 ```
