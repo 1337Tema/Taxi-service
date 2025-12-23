@@ -46,7 +46,7 @@ async def create_ride(
 # POST /rides/{id}/accept — водитель принимает заказ
 @router.post("/{ride_id}/accept", response_model=RideResponseSchema)
 async def accept_ride(
-    ride_id: int, #Асель - <--- ИЗМЕНЕНО: Было str, стало int (FastAPI сам преобразует)
+    ride_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user_id: int = Depends(get_current_user_id),
 ):
@@ -66,7 +66,7 @@ async def accept_ride(
 # PUT /rides/{id}/status — обновление статуса (оба могут)
 @router.put("/{ride_id}/status", response_model=RideResponseSchema)
 async def update_ride_status(
-    ride_id: int, # Асель - <--- ИЗМЕНЕНО: int
+    ride_id: int,
     status_update: RideStatusUpdateSchema,
     db: AsyncSession = Depends(get_async_session),
 ):

@@ -7,6 +7,7 @@ import httpx
 
 BASE_URL = "http://127.0.0.1:8000"
 
+
 async def test_endpoints():
     """Проверяет доступность всех основных эндпоинтов"""
     async with httpx.AsyncClient(trust_env=False) as client:
@@ -52,6 +53,7 @@ async def test_endpoints():
         
         print("\n" + "=" * 50)
         print("✅ Проверка завершена!")
+
 
 if __name__ == "__main__":
     asyncio.run(test_endpoints())

@@ -27,17 +27,13 @@ async def websocket_endpoint(
     try:
         while True:
             # Просто держим соединение открытым, ожидая данных от клиента.
-            # В нашей архитектуре клиент в основном слушает.
-            # Можно добавить обработку входящих сообщений, например, "ping".
             data = await websocket.receive_text()
             logger.debug(f"Получено сообщение от пользователя {user_id}: {data}")
-            # Пример "pong" ответа на "ping" клиента
+
             if data == "ping":
                 await websocket.send_text("pong")
 
     except WebSocketDisconnect:
-        # Это исключение возникает, когда клиент закрывает соединение
         logger.info(f"Клиент {user_id} отключился.")
     finally:
-        # Вне зависимости от причины, удаляем соединение из менеджера
         notification_manager.disconnect(user_id)

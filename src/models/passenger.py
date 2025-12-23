@@ -1,11 +1,9 @@
-# НОВОЕ
 """
 SQLAlchemy-модель пассажира.
 Связана один-к-одному с таблицей users.
 """
 
 from __future__ import annotations
-
 from sqlalchemy import Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,7 +21,7 @@ class Passenger(Base):
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True
-    )  # ИЗМЕНЕНО: PK = FK на user.id
+    )
 
     user: Mapped[User] = relationship(
         User,

@@ -8,6 +8,7 @@ import uuid
 # Используем 127.0.0.1 чтобы не зависеть от глюков Windows/Nginx
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 
+
 async def test_authentication():
     """Тестирует полный цикл аутентификации."""
     # trust_env=False отключает прокси Windows
@@ -106,6 +107,7 @@ async def test_authentication():
                 print(f"❌ Защита не работает: {response.status_code} - {response.text}")
         except Exception as e:
             print(f"❌ Ошибка при тесте с неверным токеном: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(test_authentication())

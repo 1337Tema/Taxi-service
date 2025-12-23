@@ -8,8 +8,6 @@ from redis.asyncio import Redis
 from .config import settings
 
 # Создаем асинхронный пул соединений к Redis.
-# Это более производительно, чем создание нового соединения для каждого запроса.
-# decode_responses=True автоматически декодирует ответы из байтов в строки UTF-8.
 redis_pool = aioredis.ConnectionPool.from_url(
     f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
     decode_responses=True,

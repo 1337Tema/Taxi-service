@@ -36,6 +36,7 @@ request_id_var = ContextVar("request_id", default="N/A")
 setup_logging()
 logger = logging.getLogger("src.main")
 
+
 async def redis_pubsub_listener():
     """Слушает канал Redis и отправляет уведомления через WebSocket."""
     redis_client = aioredis.Redis(connection_pool=redis_pool)
@@ -81,12 +82,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     logger.info("Application startup...")
 
-    # --- АВТОМАТИЧЕСКОЕ СОЗДАНИЕ ТАБЛИЦ ---
+
     async with engine.begin() as conn:
         # Эта команда создаст все таблицы, если их нет
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables created successfully.")
-    # --------------------------------------
 
     listener_task = asyncio.create_task(redis_pubsub_listener())
 
@@ -107,7 +107,7 @@ app = FastAPI(
 )
 
 origins = [
-    "http://localhost:5173",  # Адрес вашего React-приложения
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
@@ -118,6 +118,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
 
 @app.middleware("http")
 async def add_request_id_middleware(request: Request, call_next):
@@ -133,10 +134,12 @@ async def add_request_id_middleware(request: Request, call_next):
     fastapi_logger.removeFilter(filter)
     return response
 
+
 app.include_router(drivers_v1.router, prefix="/api/v1")
 app.include_router(notifications_v1.router, prefix="/api/v1")
 app.include_router(auth_v1.router, prefix="/api/v1", tags=["Auth"])
 app.include_router(rides_v1.router, prefix="/api/v1", tags=["Rides"])
+
 
 @app.get("/healthcheck", tags=["Healthcheck"])
 async def healthcheck():

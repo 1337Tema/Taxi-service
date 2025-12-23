@@ -19,17 +19,20 @@ class ConnectionManager:
         # Словарь для хранения активных соединений: {user_id: WebSocket}
         self.active_connections: Dict[int, WebSocket] = {}
 
+
     async def connect(self, user_id: int, websocket: WebSocket):
         """Принимает новое WebSocket-соединение."""
         await websocket.accept()
         self.active_connections[user_id] = websocket
         logger.info(f"Новое WebSocket-соединение для пользователя {user_id}.")
 
+
     def disconnect(self, user_id: int):
         """Отключает WebSocket-соединение."""
         if user_id in self.active_connections:
             del self.active_connections[user_id]
             logger.info(f"WebSocket-соединение для пользователя {user_id} закрыто.")
+
 
     async def send_personal_message(self, user_id: int, message: dict) -> bool:
         """

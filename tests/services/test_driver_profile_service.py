@@ -130,8 +130,7 @@ async def test_update_presence_driver_goes_offline(
     # Act
     await driver_profile_service.update_presence(driver_id, offline_presence_data)
 
-    # Assert
-    # Проверяем, что водителя больше нет в ячейке
+    # Assert Проверяем, что водителя больше нет в ячейке
     drivers_in_cell = await redis_client.hgetall(cell_key)
     assert str(driver_id) not in drivers_in_cell
 

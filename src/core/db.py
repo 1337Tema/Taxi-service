@@ -7,10 +7,9 @@ from sqlalchemy.orm import DeclarativeBase
 from .config import settings
 
 # Создаем асинхронный "движок" для взаимодействия с базой данных
-# pool_pre_ping=True проверяет соединение перед каждым запросом
 engine = create_async_engine(
     settings.database_url_asyncpg,
-    echo=False,  # Включать для отладки SQL-запросов
+    echo=False,
     pool_pre_ping=True,
 )
 
@@ -20,6 +19,7 @@ async_session_maker = async_sessionmaker(
     class_=AsyncSession, 
     expire_on_commit=False
 )
+
 
 class Base(DeclarativeBase):
     """Базовый класс для всех моделей SQLAlchemy."""

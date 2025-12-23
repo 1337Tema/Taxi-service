@@ -1,4 +1,3 @@
-# НОВОЕ
 """
 Pydantic схемы для работы с заказами (rides).
 """
@@ -21,6 +20,7 @@ class RideCreateSchema(BaseModel):
     end_x: Optional[int] = None
     end_y: Optional[int] = None'''
 
+
 class RideResponseSchema(BaseModel):
     """
     Схема ответа для информации о поездке.
@@ -33,7 +33,6 @@ class RideResponseSchema(BaseModel):
     start_y: int
     end_x: int
     end_y: int
-
 
 
 class RideStatusUpdateSchema(BaseModel):

@@ -18,8 +18,9 @@ NUM_DRIVERS = 100
 GRID_N = 100
 GRID_M = 100
 
-HEARTBEAT_REQUESTS = 1000  # Можно даже увеличить, теперь скрипт выдержит
+HEARTBEAT_REQUESTS = 1000
 MATCHING_REQUESTS = 100    
+
 
 async def setup_drivers(redis_client):
     """Создает водителей в Redis."""
@@ -38,13 +39,11 @@ async def setup_drivers(redis_client):
     await pipe.execute()
     print("✅ Водители размещены на карте.")
 
+
 async def run_heartbeat_test():
     """Тестирует эндпоинт обновления присутствия."""
     print(f"\n--- 2. Запуск {HEARTBEAT_REQUESTS} Heartbeat-запросов (PUT)... ---")
     
-    # СНИМАЕМ ЛИМИТЫ:
-    # max_connections=None (безлимит)
-    # timeout=30.0 (ждем ответ до 30 секунд, так как под нагрузкой сервер может тупить)
     limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
     timeout = httpx.Timeout(30.0, connect=30.0)
 
@@ -68,13 +67,11 @@ async def run_heartbeat_test():
             ))
 
         start_time = time.monotonic()
-        # return_exceptions=True позволяет тесту не падать, даже если часть запросов отвалится
         responses = await asyncio.gather(*tasks, return_exceptions=True)
         end_time = time.monotonic()
 
         total_time = end_time - start_time
         
-        # Считаем успешные (не исключения)
         success_count = len([r for r in responses if not isinstance(r, Exception)])
         error_count = len(responses) - success_count
 
@@ -85,6 +82,7 @@ async def run_heartbeat_test():
         
         if total_time > 0:
             print(f"RPS (Requests Per Second): {len(responses) / total_time:.2f}")
+
 
 async def run_matching_test(redis_client):
     """Кидает заказы напрямую в Redis Stream."""
@@ -107,6 +105,7 @@ async def run_matching_test(redis_client):
     print(f"Заказы отправлены за {end_time - start_time:.2f} сек.")
     print("👀 Смотри во второе окно терминала (где run_matching_service), там должны побежать логи обработки!")
 
+
 async def main():
     redis_client = aioredis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
@@ -122,6 +121,7 @@ async def main():
     await run_matching_test(redis_client)
     
     await redis_client.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

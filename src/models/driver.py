@@ -1,11 +1,9 @@
-# НОВОЕ
 """
 SQLAlchemy-модель водителя.
 Связана один-к-одному с пользователем (users).
 """
 
 from __future__ import annotations
-
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -43,40 +41,37 @@ class Driver(Base):
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True
-    )  # ИЗМЕНЕНО: PK = user.id
+    )
 
-    # текущий статус водителя
     status: Mapped[str] = mapped_column(
         String(16),
         nullable=False,
         default=DriverStatusEnum.OFFLINE.value
-    )  # НОВОЕ
+    )
 
-    # координаты (ограничиваются сеткой города)
     x: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=0
-    )  # НОВОЕ
+    )
 
     y: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=0
-    )  # НОВОЕ
+    )
 
     # используется для выбора водителя при равенстве расстояния
     last_online: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True
-    )  # НОВОЕ
+    )
 
-    # связь с User
     user: Mapped[User] = relationship(
         User,
         backref="driver_profile",
         lazy="joined"
-    )  # НОВОЕ
+    )
 
     __table_args__ = (
         CheckConstraint(f"x >= 0 AND x < {settings.CITY_GRID_N}", name="chk_driver_x_range"),

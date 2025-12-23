@@ -36,13 +36,14 @@ LOG_CONFIG = {
     "loggers": {
         "uvicorn": {"handlers": ["console_default"], "level": "INFO", "propagate": False},
         "fastapi": {"handlers": ["console_json"], "level": "INFO", "propagate": False},
-        # Логгер для нашего приложения
         "src": {"handlers": ["console_json"], "level": "INFO", "propagate": False},
     },
 }
 
+
 def setup_logging():
     dictConfig(LOG_CONFIG)
+
 
 # Фильтр для добавления request_id в логи
 class RequestIdFilter(logging.Filter):

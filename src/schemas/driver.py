@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, conint
 
 from src.core.config import settings
 
+
 class DriverStatus(str, Enum):
     """
     Перечисление возможных статусов водителя.
@@ -24,6 +25,7 @@ class DriverLocationSchema(BaseModel):
         ...,
         description=f"Координата X. Должна быть в диапазоне [0, {settings.CITY_GRID_N-1}]."
     )
+
     y: conint(ge=0, lt=settings.CITY_GRID_M) = Field(
         ...,
         description=f"Координата Y. Должна быть в диапазоне [0, {settings.CITY_GRID_M-1}]."
@@ -39,6 +41,7 @@ class DriverPresenceSchema(BaseModel):
         ...,
         description="Новый статус водителя."
     )
+    
     location: DriverLocationSchema = Field(
         ...,
         description="Текущее местоположение водителя."

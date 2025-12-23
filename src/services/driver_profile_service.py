@@ -2,13 +2,13 @@
 
 import logging
 from typing import Optional
-
 from redis.asyncio import Redis
 
 from src.schemas.driver import DriverPresenceSchema, DriverStatus
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
+
 
 class DriverProfileService:
     """
@@ -18,6 +18,7 @@ class DriverProfileService:
     """
     def __init__(self, redis: Redis):
         self.redis = redis
+
 
     async def _get_driver_previous_location(self, driver_id: int) -> Optional[tuple[int, int]]:
         """Вспомогательный метод для получения предыдущей локации водителя из Redis."""
@@ -31,6 +32,7 @@ class DriverProfileService:
                     f"Некорректный формат локации для водителя {driver_id} в Redis: {location_str}"
                 )
         return None
+
 
     async def update_presence(self, driver_id: int, presence_data: DriverPresenceSchema) -> None:
         """
@@ -76,5 +78,4 @@ class DriverProfileService:
             # Выполняем все команды в транзакции
             await pipe.execute()
 
-        # TODO: Добавить обновление статуса в PostgreSQL, когда модель Driver будет готова.
         logger.info(f"Присутствие для водителя {driver_id} успешно обновлено в Redis.")

@@ -29,12 +29,14 @@ class DriverMatchingService:
     TIMEOUT_ZSET_KEY = "proposal_timeouts" # Ключ для отложенной очереди таймаутов
     RETRY_STREAM_KEY = "retry_search_events" # Имя стрима для повторного поиска
 
+
     def __init__(self, redis: Redis):
         self.redis = redis
         self._running = False
         self.MAX_SEARCH_RADIUS = 20 # Максимальный радиус поиска водителя
         self.DRIVER_LOCK_TIMEOUT = 30 # Время блокировки водителя в секундах
         self.PROPOSAL_TIMEOUT = 25 # Время ожидания ответа водителя на предложение в секундах
+
 
     async def _ensure_consumer_group(self):
         """
@@ -48,6 +50,7 @@ class DriverMatchingService:
                 id="0",  # Начинаем читать с самого начала
                 mkstream=True,  # Создать стрим, если его нет
             )
+
             logger.info(f"Создана группа потребителей '{self.CONSUMER_GROUP}' для потока '{self.STREAM_KEY}'.")
         except Exception as e:
             if "BUSYGROUP" in str(e):
@@ -69,12 +72,12 @@ class DriverMatchingService:
             True, если блокировка установлена успешно, иначе False.
         """
         lock_key = f"driver_lock:{driver_id}"
-        # `set` с параметром `nx=True` вернет True только если ключ был установлен.
-        # `ex` устанавливает время жизни ключа.
+
         was_set = await self.redis.set(
             lock_key, ride_id, ex=self.DRIVER_LOCK_TIMEOUT, nx=True
         )
         return was_set
+
 
     async def _find_and_lock_nearest_driver(
         self, start_x: int, start_y: int, ride_id: str
@@ -118,10 +121,8 @@ class DriverMatchingService:
                 
                 # За один запрос получаем водителей из всех ячеек на периметре
                 if keys_to_check:
-                    # Используем SUNION для объединения множеств ключей, но HKEYS возвращает списки
-                    # Поэтому делаем несколько запросов в pipeline
                     pipe = self.redis.pipeline()
-                    for key in set(keys_to_check): # set() для уникальности
+                    for key in set(keys_to_check):
                         pipe.hkeys(key)
                     
                     results = await pipe.execute()
@@ -150,7 +151,6 @@ class DriverMatchingService:
         while self._running:
             try:
                 # Находим все предложения, у которых истек срок
-                # `(0, time.time())` - выбрать все с score от 0 до текущего момента
                 expired_proposals = await self.redis.zrangebyscore(
                     self.TIMEOUT_ZSET_KEY, 0, time.time()
                 )
@@ -168,9 +168,7 @@ class DriverMatchingService:
                     ride_id, driver_id_str = proposal.split(":")
                     driver_id = int(driver_id_str)
 
-                    # Критически важная проверка: снимаем блокировку, только если она
-                    # все еще принадлежит этому заказу. Если водитель принял заказ,
-                    # OrderService уже мог снять или изменить эту блокировку.
+                    # Снимаем блокировку, только если она все еще принадлежит этому заказу
                     lock_key = f"driver_lock:{driver_id}"
                     current_lock_ride_id = await self.redis.get(lock_key)
 
@@ -179,11 +177,6 @@ class DriverMatchingService:
                         await self.redis.delete(lock_key)
                         
                         # Публикуем событие для повторного поиска
-                        # Мы не можем просто запустить поиск заново, т.к. у нас нет
-                        # данных о заказе (координат). Мы должны попросить систему
-                        # начать поиск заново.
-                        # TODO: Нужно получить данные заказа и передать их.
-                        # Пока передаем только ride_id и ID водителя для исключения.
                         await self.redis.xadd(
                             self.RETRY_STREAM_KEY,
                             {"ride_id": ride_id, "exclude_driver_id": driver_id}
@@ -215,7 +208,6 @@ class DriverMatchingService:
                         block=0,
                     )
                 except Exception as e:
-                    # Если получаем ошибку NOGROUP (группа удалена), пересоздаем её
                     if "NOGROUP" in str(e):
                         logger.warning("Группа потребителей не найдена (был flushdb?). Пересоздаем...")
                         await self._ensure_consumer_group()
@@ -232,13 +224,12 @@ class DriverMatchingService:
                 logger.info(f"Получен новый заказ {raw_data} с ID {message_id}")
 
                 try:
-                    # --- ИСПРАВЛЕНИЕ: ПРОВЕРКА ТИПА ДАННЫХ ---
                     raw_payload = raw_data['data']
                     
                     if isinstance(raw_payload, str):
-                        data = json.loads(raw_payload) # Если строка - парсим
+                        data = json.loads(raw_payload)
                     elif isinstance(raw_payload, dict):
-                        data = raw_payload # Если словарь - берем так
+                        data = raw_payload
                     else:
                         logger.error(f"Unknown data type: {type(raw_payload)}")
                         await self.redis.xack(self.STREAM_KEY, self.CONSUMER_GROUP, message_id)
@@ -275,7 +266,6 @@ class DriverMatchingService:
                             "ride_id": ride_id,
                             "start_x": start_x,
                             "start_y": start_y,
-                            #Асель-ДОБАВЛЕНО
                             "end_x": int(data['end_x']), 
                             "end_y": int(data['end_y']),
                             "price": data.get('price', 0)
@@ -296,7 +286,7 @@ class DriverMatchingService:
 
                 else:
                     logger.warning(f"Не удалось найти водителя для заказа {data.get('ride_id')}. Заказ остается в очереди.")
-                    await asyncio.sleep(1) # Ждем перед следующей попыткой
+                    await asyncio.sleep(1)
                     continue
 
             except asyncio.CancelledError:
@@ -335,6 +325,4 @@ class DriverMatchingService:
     def stop(self):
         """Останавливает основной цикл работы."""
         self._running = False
-        # Для немедленной остановки можно отменить текущую задачу ожидания redis
-        # Но простой установки флага обычно достаточно для корректного завершения
         logger.info("Получен сигнал на остановку DriverMatchingService.")

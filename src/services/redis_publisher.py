@@ -1,4 +1,3 @@
-# ДОПОЛНЕНО
 """
 Публикация событий в Redis Streams.
 """
@@ -10,9 +9,6 @@ import asyncio
 from redis.asyncio import Redis
 from src.core.redis import redis_pool
 
-
-# Асель-ИСПРАВЛЕНО: Было "orders:stream", стало "order_events"
-# Теперь название совпадает с тем, что ждет Matching Service
 STREAM_ORDERS = "order_events"
 
 
@@ -20,9 +16,6 @@ async def _get_redis_client() -> Redis:
     return Redis(connection_pool=redis_pool)
 
 
-# ============================================================
-# БАЗОВАЯ ФУНКЦИЯ
-# ============================================================
 async def publish_event(event_name: str, payload: Mapping[str, Any]) -> str:
     client = await _get_redis_client()
     try:
@@ -38,9 +31,6 @@ async def publish_event(event_name: str, payload: Mapping[str, Any]) -> str:
             await asyncio.sleep(0)
 
 
-# ============================================================
-# SHORTCUTS
-# ============================================================
 async def publish_order_created(payload: Mapping[str, Any]) -> str:
     return await publish_event("OrderCreated", payload)
 

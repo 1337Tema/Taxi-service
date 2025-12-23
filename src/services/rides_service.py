@@ -1,4 +1,3 @@
-# ИЗМЕНЕНО + ДОПОЛНЕНО
 """
 Сервис для управления поездками (Rides).
 - создание поездки
@@ -25,8 +24,10 @@ from src.services.redis_publisher import (
     publish_driver_assigned,
     publish_ride_completed,
 )
-# Асель - ДОБАВЛЕНО: Вспомогательная функция для создания ответа
+
+
 def _build_ride_response(ride: Ride) -> RideResponseSchema:
+    """Строит и возвращает схему RideResponseSchema из модели Ride."""
     return RideResponseSchema(
         ride_id=str(ride.id),
         estimated_price=float(ride.price),
@@ -36,17 +37,15 @@ def _build_ride_response(ride: Ride) -> RideResponseSchema:
         start_y=ride.start_y,
         end_x=ride.end_x,
         end_y=ride.end_y
-        # -------------------------------------------------
     )
 
-# ============================================================
-# 1) СОЗДАНИЕ ПОЕЗДКИ 
-# ============================================================
+
 async def create_ride(
     ride_data: RideCreateSchema,
     passenger_user_id: int,
     db: AsyncSession
 ) -> RideResponseSchema:
+    """Создает новую поездку и публикует событие OrderCreated."""
 
     pricing = calculate_price_and_eta(
         start_x=ride_data.start_x,
@@ -90,14 +89,12 @@ async def create_ride(
     return _build_ride_response(new_ride)
 
 
-# ============================================================
-# 2) ПРИНЯТИЕ ПОЕЗДКИ ВОДИТЕЛЕМ
-# ============================================================
 async def assign_driver(
     ride_id: str,
     driver_user_id: int,
     db: AsyncSession
 ) -> RideResponseSchema:
+    """Назначает водителя на поездку и публикует событие DriverAssigned."""
 
     ride = await db.get(Ride, int(ride_id))
     if not ride:
@@ -131,14 +128,12 @@ async def assign_driver(
     return _build_ride_response(ride)
 
 
-# ============================================================
-# 3) ОБНОВЛЕНИЕ СТАТУСА ПОЕЗДКИ
-# ============================================================
 async def update_ride_status(
     ride_id: str,
     new_status: str,
     db: AsyncSession
 ) -> RideResponseSchema:
+    """Обновляет статус поездки и публикует событие RideCompleted, если применимо."""
 
     ride = await db.get(Ride, int(ride_id))
     if not ride:
@@ -163,13 +158,11 @@ async def update_ride_status(
     return _build_ride_response(ride)
 
 
-# ============================================================
-# 4) ИСТОРИЯ ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ
-# ============================================================
 async def get_user_rides(
     user_id: int,
     db: AsyncSession
 ) -> List[RideResponseSchema]:
+    """Возвращает историю поездок пользователя."""
 
     result = await db.execute(
         select(Ride).where(Ride.passenger_user_id == user_id)

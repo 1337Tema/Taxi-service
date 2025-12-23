@@ -1,12 +1,11 @@
-# ИЗМЕНЕНО (вставлены новые поля для pricing)
 """Модуль для управления настройками приложения с использованием Pydantic."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import ConfigDict  # добавляем этот импорт
+from pydantic import ConfigDict
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # загружает переменные из .env в окружение
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -22,6 +21,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     
+
     @property
     def database_url_asyncpg(self) -> str:
         """Генерирует URL для асинхронного подключения к БД."""
@@ -29,6 +29,7 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+
 
     # Настройки Redis
     REDIS_HOST: str
@@ -43,7 +44,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    # --- НОВОЕ: параметры ценообразования ---
+    # Параметры ценообразования
     PRICE_BASE_FARE: float = 50.0       # базовая стоимость
     PRICE_PER_CELL: float = 5.0         # стоимость за 1 ячейку (манхэттен)
     PRICE_T_CELL: float = 10.0          # время (в секундах) на 1 ячейку
@@ -54,5 +55,5 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-# Синглтон настроек
+
 settings = Settings()
