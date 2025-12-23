@@ -9,8 +9,8 @@ class WebSocketService {
     if (!token) return;
 
     // Подключаемся к вебсокету бэкенда
-    // Обрати внимание: протокол ws:// вместо http://
-    this.ws = new WebSocket(`ws://127.0.0.1:8000/api/v1/notifications/ws?token=${token}`);
+    const host = window.location.host;
+    this.ws = new WebSocket(`ws://${host}/api/v1/notifications/ws?token=${token}`);
 
     this.ws.onopen = () => {
       console.log('🟢 WS Connected');

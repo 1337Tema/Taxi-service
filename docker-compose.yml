@@ -28,12 +28,26 @@ services:
     ports:
       - "6379:6379"
 
+  matching_service:
+    build: .
+    command: python -m src.run_matching_service
+    env_file: .env
+    depends_on:
+      - redis
+      - api
+    restart: always
+
+  frontend:
+    build: ./taxi-frontend
+    restart: always
+
   nginx:
     build: ./nginx
     ports:
       - "80:80"
     depends_on:
       - api
+      - frontend
     restart: always
 
 volumes:

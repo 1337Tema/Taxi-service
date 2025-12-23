@@ -3,7 +3,7 @@ import axios from 'axios';
 // Создаем настроенный экземпляр axios
 export const api = axios.create({
   // Адрес нашего Python-сервера (локально)
-  baseURL: 'http://127.0.0.1:8000/api/v1',
+  baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
